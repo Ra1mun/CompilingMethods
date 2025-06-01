@@ -4,6 +4,8 @@ public class Token
 {
     public string Value { get; set; }
     public string Type { get; set; }
+    public int Line { get; set; }
+    public int Position { get; set; }
 
     public override string ToString()
     {
@@ -25,10 +27,17 @@ public class LexerParser
     public List<Token> Tokenize()
     {
         var tokens = new List<Token>();
+        int line = 1;
+        int position = 0;
 
         while (_position < _input.Length)
         {
             char current = _input[_position];
+            if (current == '\n')
+            {
+                line++;
+                position = 0;
+            }
 
             if (char.IsWhiteSpace(current))
             {
@@ -40,14 +49,14 @@ public class LexerParser
             {
                 var identifier = ReadIdentifier();
                 if (Definitions.Keywords.Contains(identifier))
-                    tokens.Add(new Token { Value = identifier, Type = identifier });
+                    tokens.Add(new Token { Value = identifier, Type = identifier, Line = line, Position = position });
                 else
-                    tokens.Add(new Token { Value = identifier, Type = "id" });
+                    tokens.Add(new Token { Value = identifier, Type = "id", Line = line, Position = position });
             }
             else if (char.IsDigit(current))
             {
                 var number = ReadNumber();
-                tokens.Add(new Token { Value = number, Type = "number" });
+                tokens.Add(new Token { Value = number, Type = "number", Line = line, Position = position });
             }
             else if (current == '.' || current == '"')
             {
@@ -56,23 +65,25 @@ public class LexerParser
             else if (IsTwoCharOperator(current))
             {
                 var op = ReadTwoCharOperator();
-                tokens.Add(new Token { Value = op, Type = Definitions.Operators[op] });
+                tokens.Add(new Token { Value = op, Type = op, Line = line, Position = position });
             }
-            else if (Definitions.Operators.ContainsKey(current.ToString()))
+            else if (Definitions.Operators.Contains(current.ToString()))
             {
                 var op = current.ToString();
-                tokens.Add(new Token { Value = op, Type = Definitions.Operators[op] });
+                tokens.Add(new Token { Value = op, Type = op, Line = line, Position = position });
                 _position++;
             }
             else if (Definitions.SingleCharTokens.Contains(current))
             {
-                tokens.Add(new Token { Value = current.ToString(), Type = current.ToString() });
+                tokens.Add(new Token { Value = current.ToString(), Type = current.ToString(), Line = line, Position = position });
                 _position++;
             }
             else
             {
                 throw new Exception($"Неизвестный символ: {current}");
             }
+
+            position++;
         }
 
         tokens.Add(new Token { Value = "EOF", Type = "EOF" });
@@ -85,8 +96,8 @@ public class LexerParser
         if (_position + 1 >= _input.Length)
             return false;
 
-        string twoChars = c.ToString() + _input[_position + 1];
-        return Definitions.Operators.ContainsKey(twoChars);
+        var twoChars = c.ToString() + _input[_position + 1];
+        return Definitions.Operators.Contains(twoChars);
     }
 
     private string ReadTwoCharOperator()

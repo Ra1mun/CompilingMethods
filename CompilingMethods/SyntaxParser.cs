@@ -7,21 +7,20 @@ public class SyntaxParser
 {
     private readonly List<Token> _tokens;
     private int _position;
+    
+    private Token Current => _tokens[_position];
+    private readonly Stack<Token> _stack = new();
 
     public SyntaxParser(List<Token> tokens)
     {
         _tokens = tokens;
     }
 
-    // === Синтаксические процедуры ===
-
     public void Parse_S()
     {
-        var currentType = Current().Type;
-
-        if (currentType == "ЦЕЛ" || currentType == "ВЕЩ")
+        if (Current.Type == "ЦЕЛ" || Current.Type == "ВЕЩ")
         {
-            Match(currentType);
+            Match(Current.Type);
             Parse_I();
             Parse_S();
         }
@@ -41,25 +40,28 @@ public class SyntaxParser
 
     private void Parse_W()
     {
-        if (Current().Type == ",")
+        if (Current.Type == ",")
         {
             Match(",");
-            Parse_I();
+            Match("id");
+            Parse_H();
+            Parse_W();
         }
         // else: ε
     }
 
     private void Parse_Y()
     {
-        if (Current().Type == "id")
+        if (Current.Type == "id")
         {
-            Parse_I();
-            Match("op_assign");
+            Match("id");
+            Parse_H();
+            Match("=");
             Parse_U();
             Match(";");
             Parse_Y();
         }
-        else if (Current().Type == "ЕСЛИ")
+        else if (Current.Type == "ЕСЛИ")
         {
             Match("ЕСЛИ");
             Match("(");
@@ -69,25 +71,27 @@ public class SyntaxParser
             Parse_Y();
             Parse_EY();
         }
-        else if (Current().Type == "ПОКА")
+        else if (Current.Type == "ПОКА")
         {
             Match("ПОКА");
             Match("(");
             Parse_C();
             Match(")");
-            Match(";");
+            Match("{");
             Parse_Y();
+            Match("}");
         }
-        else if (Current().Type == "ВВОД")
+        else if (Current.Type == "ВВОД")
         {
             Match("ВВОД");
             Match("(");
             Match("id");
+            Parse_H();
             Match(")");
             Match(";");
             Parse_Y();
         }
-        else if (Current().Type == "ВЫВОД")
+        else if (Current.Type == "ВЫВОД")
         {
             Match("ВЫВОД");
             Match("(");
@@ -101,7 +105,7 @@ public class SyntaxParser
 
     private void Parse_EY()
     {
-        if (Current().Type == "ИНАЧЕ")
+        if (Current.Type == "ИНАЧЕ")
         {
             Match("ИНАЧЕ");
             Match("{");
@@ -113,7 +117,8 @@ public class SyntaxParser
 
     private void Parse_C()
     {
-        Parse_U();
+        Parse_T();
+        Parse_U_();
         Parse_K();
     }
 
@@ -125,9 +130,15 @@ public class SyntaxParser
 
     private void Parse_U_()
     {
-        if (Current().Type == "op_add" || Current().Type == "op_sub")
+        if (Current.Type == "+")
         {
-            Match(Current().Type);
+            Match("+");
+            Parse_T();
+            Parse_U_();
+        }
+        else if (Current.Type == "-")
+        {
+            Match("-");
             Parse_T();
             Parse_U_();
         }
@@ -142,9 +153,15 @@ public class SyntaxParser
 
     private void Parse_T_()
     {
-        if (Current().Type == "op_mul" || Current().Type == "op_div")
+        if (Current.Type == "*")
         {
-            Match(Current().Type);
+            Match("*");
+            Parse_F();
+            Parse_T_();
+        }
+        else if (Current.Type == "/")
+        {
+            Match("/");
             Parse_F();
             Parse_T_();
         }
@@ -153,9 +170,9 @@ public class SyntaxParser
 
     private void Parse_F()
     {
-        if (Current().Type == "op_unsub")
+        if (Current.Type == "~")
         {
-            Match("op_unsub");
+            Match("~");
             Parse_R();
         }
         else
@@ -166,12 +183,17 @@ public class SyntaxParser
 
     private void Parse_R()
     {
-        if (Current().Type == "id")
+        if (Current.Type == "number")
+        {
+            Match("number");
+            Parse_H();
+        }
+        else if (Current.Type == "id")
         {
             Match("id");
             Parse_H();
         }
-        else if (Current().Type == "(")
+        else if (Current.Type == "(")
         {
             Match("(");
             Parse_U();
@@ -179,13 +201,13 @@ public class SyntaxParser
         }
         else
         {
-            throw new Exception($"Ошибка в выражении: ожидается id или '(', найдено '{Current().Value}'");
+            throw new Exception($"Ошибка в правиле R: ожидается 'number', '(', 'id' найдено '{Current.Value}' на позиции {Current.Line}, {Current.Position}");
         }
     }
 
     private void Parse_H()
     {
-        if (Current().Type == "[")
+        if (Current.Type == "[")
         {
             Match("[");
             Parse_U();
@@ -194,35 +216,85 @@ public class SyntaxParser
         // else: ε
     }
 
-    private void Parse_K()
+    private void Parse_J()
     {
-        if (Current().Type == "op_less" || Current().Type == "op_greater" || Current().Type == "op_eq" || Current().Type == "op_neq")
+        Parse_Q();
+        Parse_J_();
+    }
+
+    private void Parse_J_()
+    {
+        if (Current.Type == "|")
         {
-            Match(Current().Type);
-            Parse_U();
+            Match("|");
+            Parse_Q();
+            Parse_J_();
         }
         // else: ε
     }
 
-    // === Лексический анализатор ===
-
-    private Token Current()
+    private void Parse_Q()
     {
-        if (_position >= _tokens.Count)
-            return new Token { Type = "EOF", Value = "" };
-        return _tokens[_position];
+        Parse_K();
+        Parse_Q_();
+    }
+
+    private void Parse_Q_()
+    {
+        if (Current.Type == "&")
+        {
+            Match("&");
+            Parse_K();
+            Parse_Q_();
+        }
+        // else: ε
+    }
+
+    private void Parse_K()
+    {
+        if (Current.Type == "(")
+        {
+            Match("(");
+            Parse_U();
+            Match(")");
+        }
+        else
+        {
+            Parse_U();
+            if (Current.Type == ">" || Current.Type == "<" || 
+                Current.Type == "#" || Current.Type == "!")
+            {
+                Match(Current.Type);
+                Parse_U();
+                Parse_Z();
+            }
+            else
+            {
+                throw new Exception($"Ошибка в правиле K: ожидается оператор сравнения, найдено '{Current.Value}' на позиции {Current.Line}, {Current.Position}");
+            }
+        }
+    }
+
+    private void Parse_Z()
+    {
+        // ε - пустое правило
+    }
+
+    public Stack<Token> GetOps()
+    {
+        return _stack;
     }
 
     private void Match(string expectedType)
     {
-        if (Current().Type == expectedType)
+        if (Current.Type == expectedType)
         {
-            Console.WriteLine($"matched token: {Current().Value} ({Current().Type})");
+            Console.WriteLine($"matched token: {Current.Value} ({Current.Type})");
             _position++;
         }
         else
         {
-            throw new Exception($"Ожидалось '{expectedType}', найдено '{Current().Type}'");
+            throw new Exception($"Ожидалось '{expectedType}', найдено '{Current.Type}'");
         }
     }
 }

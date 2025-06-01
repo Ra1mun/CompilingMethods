@@ -23,21 +23,11 @@ try
     parser.Parse_S();
     
     Console.WriteLine("\nАнализ завершён успешно!");
+    var ops = parser.GetOps();
+    Console.WriteLine(string.Join(" ", ops));
 }
 catch (Exception ex)
 {
     Console.WriteLine("\nОшибка: " + ex.Message);
 }
 
-fullInput = null;
-while (true)
-{
-    Console.Write("> ");
-    line = Console.ReadLine();
-    if (string.IsNullOrWhiteSpace(line)) break;
-    fullInput += line + " ";
-}
-
-Console.WriteLine("\nДетерминированный конечный автомат:");
-var transitionTable = new TransitionTable();
-transitionTable.Parse(fullInput);

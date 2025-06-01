@@ -9,22 +9,22 @@ public static class Definitions
     public static readonly HashSet<char> SingleCharTokens = ['(', ')', '{', '}', '[', ']', ';', ',', '~'];
 
     // Множество операций
-    public static readonly Dictionary<string, string> Operators = new()
+    public static readonly List<string> Operators = new()
     {
-        { "+", "op_add" },
-        { "-", "op_sub" },
-        { "*", "op_mul" },
-        { "/", "op_div" },
-        { "=", "op_assign" },
-        { "<", "op_less" },
-        { ">", "op_greater" },
-        { "#", "op_eq" },     // равно
-        { "!", "op_neq" },    // не равно
-        { "||", "op_or" },
-        { "&&", "op_and" },
-        { "~", "op_unsub" },
+        "+",
+        "-",
+        "*",
+        "/",
+        "=",
+        "<",
+        ">",
+        "#", // равно
+        "!", // не равно
+        "||",
+        "&&",
+        "~"
     };
-    
+
     public static readonly Dictionary<int, string> SemanticPrograms = new()
     {
         { 0, "Начало лексемы := C[i]" },
@@ -62,20 +62,56 @@ public static class Definitions
         { 32, "Распознан &" },
         { 33, "Распознано десятичное число" }
     };
-    
-    
-    
+
+
     public static readonly State[,] TransitionTable = new[,]
     {
         // буква | цифра | + | - | * | / | = | < | > | ! | . | , | # | ( | ) | [ | ] | { | } | ~ | || | & | ; | пробел | др | \n | EOF
-        { State.A, State.B, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.S, State.Z, State.E, State.E }, // S
-        { State.A, State.A, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E, State.E }, // A
-        { State.Z, State.B, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.C, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E, State.E }, // B
-        { State.Z, State.D, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z }, // C
-        { State.Z, State.D, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E, State.E, State.Z, State.E, State.Z, State.E, State.Z, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E, State.E }, // D
-        { State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E }, // E
-        { State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z }  // Z
+        {
+            State.A, State.B, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E,
+            State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.S,
+            State.Z, State.E, State.E
+        }, // S
+        {
+            State.A, State.A, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E,
+            State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E,
+            State.Z, State.E, State.E
+        }, // A
+        {
+            State.Z, State.B, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.C, State.E,
+            State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E,
+            State.Z, State.E, State.E
+        }, // B
+        {
+            State.Z, State.D, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z,
+            State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z,
+            State.Z, State.Z, State.Z
+        }, // C
+        {
+            State.Z, State.D, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.Z, State.E,
+            State.E, State.Z, State.E, State.Z, State.E, State.Z, State.E, State.E, State.E, State.E, State.E, State.E,
+            State.Z, State.E, State.E
+        }, // D
+        {
+            State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E,
+            State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E, State.E,
+            State.E, State.E, State.E
+        }, // E
+        {
+            State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z,
+            State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z, State.Z,
+            State.Z, State.Z, State.Z
+        } // Z
     };
 }
 
-public enum State { S, A, B, C, D, E, Z }
+public enum State
+{
+    S,
+    A,
+    B,
+    C,
+    D,
+    E,
+    Z
+}
