@@ -58,7 +58,12 @@ public class LexerParser
                 var number = ReadNumber();
                 tokens.Add(new Token { Value = number, Type = "number", Line = line, Position = position });
             }
-            else if (current == '.' || current == '"')
+            else if (current == '"')
+            {
+                var str = ReadString();
+                tokens.Add(new Token { Value = str, Type = "string", Line = line, Position = position });
+            }
+            else if (current == '\'')
             {
                 throw new Exception($"Неподдерживаемый символ: {current}");
             }
@@ -89,6 +94,35 @@ public class LexerParser
         tokens.Add(new Token { Value = "EOF", Type = "EOF" });
 
         return tokens;
+    }
+
+    private string ReadString()
+    {
+        _position++; // Пропускаем открывающую кавычку
+        int start = _position;
+        while (_position < _input.Length && _input[_position] != '"')
+        {
+            if (_input[_position] == '\\' && _position + 1 < _input.Length && _input[_position + 1] == 'n')
+            {
+                _position += 2; // Пропускаем \n
+                continue;
+            }
+            if (_input[_position] == '\n')
+            {
+                throw new Exception("Незакрытая строка");
+            }
+            _position++;
+        }
+        
+        if (_position >= _input.Length)
+        {
+            throw new Exception("Незакрытая строка");
+        }
+        
+        string result = _input.Substring(start, _position - start);
+        result = result.Replace("\\n", "\n"); // Заменяем \n на реальный перенос строки
+        _position++; // Пропускаем закрывающую кавычку
+        return result;
     }
 
     private bool IsTwoCharOperator(char c)

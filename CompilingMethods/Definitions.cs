@@ -3,7 +3,11 @@
 public static class Definitions
 {
     // Список ключевых слов
-    public static readonly HashSet<string> Keywords = ["ЦЕЛ", "ВЕЩ", "ЕСЛИ", "ИНАЧЕ", "ПОКА", "ВВОД", "ВЫВОД"];
+    public static readonly HashSet<string> Keywords = new()
+    {
+        "ЦЕЛ", "ВЕЩ", "ЕСЛИ", "ИНАЧЕ", "ПОКА", "ВВОД", "ВЫВОД",
+        "МАСС", "КОР", "ЭКСП", "ЛОГ", "СИН", "КОС", "ТАН"
+    };
 
     // Множество разделителей
     public static readonly HashSet<char> SingleCharTokens = ['(', ')', '{', '}', '[', ']', ';', ',', '~'];
@@ -62,29 +66,6 @@ public static class Definitions
         { 32, "Распознан &" },
         { 33, "Распознано десятичное число" }
     };
-    
-    public static readonly Dictionary<string, int> Map = new()
-    {
-        { "=", 16 },
-        { "<", 17 },
-        { ">", 18 },
-        { "#", 19 }, // ==
-        { "!=", 22 },
-        { "+", 3 },
-        { "-", 4 },
-        { "*", 5 },
-        { "/", 6 },
-        { "ВЫВОД", 26 },
-        { "ВВОД", 25 },
-        { "sqrt", 27 },
-        { "exp", 28 },
-        { "log_b", 29 },
-        { "j", 34 },
-        { "jf", 35 },
-        { "new", 31 },
-        { "ind", 36 }
-    };
-
 
     public static readonly State[,] TransitionTable = new[,]
     {

@@ -10,17 +10,24 @@ public enum OperationType
     JumpIfFalse,
     Print,
     Read,
-    Assign
+    Assign,
+    Function,
+    ArrayDecl,
+    ArraySize,
+    String,
+    ArrayAssign,
+    Array2DAssign,
+    Array1DDecl
 }
 
 public class Operation
 {
-    public OperationType Type { get; set; }
-    public string Value { get; set; }
-    public int Line { get; set; }
-    public int Position { get; set; }
+    public OperationType Type { get; }
+    public string Value { get; }
+    public int Line { get; }
+    public int Position { get; }
 
-    public Operation(OperationType type, string value, int line = 0, int position = 0)
+    public Operation(OperationType type, string value, int line, int position)
     {
         Type = type;
         Value = value;

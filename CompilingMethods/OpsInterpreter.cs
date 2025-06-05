@@ -14,9 +14,9 @@ public class OpsInterpreter
     private int _pc;
 
     // Память для массивов
-    private int _memPointer;
-    private const int MemSize = 3000;
-    private readonly List<object> _memory = new();
+    private readonly Dictionary<string, double[,]> _arrays = new();
+    private int _currentArrayRows;
+    private int _currentArrayCols;
 
     public OpsInterpreter(List<Operation> program)
     {
@@ -53,6 +53,9 @@ public class OpsInterpreter
             case OperationType.Number:
                 _stack.Push(double.Parse(op.Value));
                 break;
+            case OperationType.String:
+                Console.Write(op.Value);
+                break;
             case OperationType.Variable:
                 if (!_variables.TryGetValue(op.Value, out double value))
                 {
@@ -62,6 +65,84 @@ public class OpsInterpreter
                 break;
             case OperationType.Operator:
                 ExecuteOperator(op.Value);
+                break;
+            case OperationType.Function:
+                ExecuteFunction(op.Value);
+                break;
+            case OperationType.ArraySize:
+                if (_stack.Count == 0)
+                {
+                    throw new Exception("Стек пуст при вычислении размера массива");
+                }
+                var size = (int)Math.Round(_stack.Pop());
+                if (size <= 0)
+                {
+                    throw new Exception("Размер массива должен быть положительным числом");
+                }
+                if (op.Value == "rows")
+                {
+                    _currentArrayRows = size;
+                    Console.WriteLine($"Установлен размер строк: {size}"); // Отладочный вывод
+                }
+                else if (op.Value == "cols")
+                {
+                    _currentArrayCols = size;
+                    Console.WriteLine($"Установлен размер столбцов: {size}"); // Отладочный вывод
+                }
+                else
+                {
+                    throw new Exception($"Неизвестное измерение массива: {op.Value}");
+                }
+                break;
+            case OperationType.Array1DDecl:
+                if (_currentArrayRows <= 0)
+                {
+                    throw new Exception($"Некорректный размер одномерного массива: {_currentArrayRows}");
+                }
+                var array1DName = op.Value;
+                _arrays[array1DName] = new double[_currentArrayRows, 1]; // Одномерный массив как двумерный с одним столбцом
+                Console.WriteLine($"Создан одномерный массив {array1DName} размером {_currentArrayRows}"); // Отладочный вывод
+                break;
+            case OperationType.ArrayDecl:
+                if (_currentArrayRows <= 0 || _currentArrayCols <= 0)
+                {
+                    throw new Exception($"Некорректные размеры двумерного массива: rows={_currentArrayRows}, cols={_currentArrayCols}");
+                }
+                var array2DName = op.Value;
+                _arrays[array2DName] = new double[_currentArrayRows, _currentArrayCols];
+                Console.WriteLine($"Создан двумерный массив {array2DName} размером {_currentArrayRows}x{_currentArrayCols}"); // Отладочный вывод
+                break;
+            case OperationType.ArrayAssign:
+                // Присваивание значения элементу массива
+                var assignValue = _stack.Pop();
+                var assignIndex = (int)_stack.Pop();
+                var assignArrayName = _stack.Pop().ToString();
+                if (!_arrays.TryGetValue(assignArrayName, out var assignArray))
+                {
+                    throw new Exception($"Массив не найден: {assignArrayName}");
+                }
+                if (assignIndex < 0 || assignIndex >= assignArray.GetLength(0))
+                {
+                    throw new Exception($"Индекс вне границ массива: {assignIndex}");
+                }
+                assignArray[assignIndex, 0] = assignValue;
+                break;
+            case OperationType.Array2DAssign:
+                // Присваивание значения элементу двумерного массива
+                var assignValue2D = _stack.Pop();
+                var assignColIndex = (int)_stack.Pop();
+                var assignRowIndex = (int)_stack.Pop();
+                var assignArrayName2D = _stack.Pop().ToString();
+                if (!_arrays.TryGetValue(assignArrayName2D, out var assignArray2D))
+                {
+                    throw new Exception($"Массив не найден: {assignArrayName2D}");
+                }
+                if (assignRowIndex < 0 || assignRowIndex >= assignArray2D.GetLength(0) ||
+                    assignColIndex < 0 || assignColIndex >= assignArray2D.GetLength(1))
+                {
+                    throw new Exception($"Индекс вне границ массива: [{assignRowIndex}, {assignColIndex}]");
+                }
+                assignArray2D[assignRowIndex, assignColIndex] = assignValue2D;
                 break;
             case OperationType.Label:
                 // Метки обрабатываются в PreprocessLabels
@@ -73,12 +154,20 @@ public class OpsInterpreter
                 JumpIfFalse(op.Value);
                 break;
             case OperationType.Print:
-                Console.WriteLine(_stack.Pop());
+                if (_stack.Count > 0)
+                {
+                    Console.WriteLine(_stack.Pop());
+                }
                 break;
             case OperationType.Read:
                 Console.Write("Введите значение: ");
-                var input = double.Parse(Console.ReadLine());
-                _variables[op.Value] = input;
+                var input = Console.ReadLine();
+                if (!double.TryParse(input, out var inputValue))
+                {
+                    throw new Exception($"Некорректное числовое значение: {input}");
+                }
+                _variables[op.Value] = inputValue;
+                Console.WriteLine($"Установлено значение {op.Value} = {inputValue}"); // Отладочный вывод
                 break;
             case OperationType.Assign:
                 var val = _stack.Pop();
@@ -86,6 +175,36 @@ public class OpsInterpreter
                 break;
             default:
                 throw new Exception($"Неизвестная операция: {op.Type}");
+        }
+    }
+
+    private void ExecuteFunction(string func)
+    {
+        var arg = _stack.Pop();
+        switch (func)
+        {
+            case "КОР":
+                if (arg < 0) throw new Exception("Отрицательное число под корнем");
+                _stack.Push(Math.Sqrt(arg));
+                break;
+            case "ЭКСП":
+                _stack.Push(Math.Exp(arg));
+                break;
+            case "ЛОГ":
+                if (arg <= 0) throw new Exception("Логарифм от неположительного числа");
+                _stack.Push(Math.Log(arg));
+                break;
+            case "СИН":
+                _stack.Push(Math.Sin(arg));
+                break;
+            case "КОС":
+                _stack.Push(Math.Cos(arg));
+                break;
+            case "ТАН":
+                _stack.Push(Math.Tan(arg));
+                break;
+            default:
+                throw new Exception($"Неизвестная функция: {func}");
         }
     }
 
@@ -127,10 +246,34 @@ public class OpsInterpreter
                 UnaryOp(a => -a);
                 break;
             case "[]":
-                // Обработка индексации массива
+                // Обработка индексации одномерного массива
                 var index = (int)_stack.Pop();
-                var array = _stack.Pop();
-                // TODO: Реализовать работу с массивами
+                var arrayName = _stack.Pop().ToString();
+                if (!_arrays.TryGetValue(arrayName, out var array))
+                {
+                    throw new Exception($"Массив не найден: {arrayName}");
+                }
+                if (index < 0 || index >= array.GetLength(0))
+                {
+                    throw new Exception($"Индекс вне границ массива: {index}");
+                }
+                _stack.Push(array[index, 0]);
+                break;
+            case "[][]":
+                // Обработка индексации двумерного массива
+                var colIndex = (int)_stack.Pop();
+                var rowIndex = (int)_stack.Pop();
+                var arrayName2D = _stack.Pop().ToString();
+                if (!_arrays.TryGetValue(arrayName2D, out var array2D))
+                {
+                    throw new Exception($"Массив не найден: {arrayName2D}");
+                }
+                if (rowIndex < 0 || rowIndex >= array2D.GetLength(0) ||
+                    colIndex < 0 || colIndex >= array2D.GetLength(1))
+                {
+                    throw new Exception($"Индекс вне границ массива: [{rowIndex}, {colIndex}]");
+                }
+                _stack.Push(array2D[rowIndex, colIndex]);
                 break;
             default:
                 throw new Exception($"Неизвестный оператор: {op}");

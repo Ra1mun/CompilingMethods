@@ -7,4 +7,14 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <Folder Include="bin\Debug\net9.0\" />
+      <Folder Include="Tests\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="bin\Debug\net9.0\test1.txt" />
+      <None Include="bin\Debug\net9.0\test2.txt" />
+    </ItemGroup>
+
 </Project>

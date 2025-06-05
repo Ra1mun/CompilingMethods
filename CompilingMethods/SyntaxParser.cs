@@ -27,6 +27,12 @@ public class SyntaxParser
             Parse_I();
             Parse_S();
         }
+        else if (Current.Type == "МАСС")
+        {
+            Match("МАСС");
+            Parse_Array_Decl();
+            Parse_S();
+        }
         else
         {
             Parse_Y();
@@ -211,6 +217,11 @@ public class SyntaxParser
             Match("number");
             Parse_H();
         }
+        else if (Current.Type == "string")
+        {
+            _output.Add(new Operation(OperationType.String, Current.Value, Current.Line, Current.Position));
+            Match("string");
+        }
         else if (Current.Type == "id")
         {
             _output.Add(new Operation(OperationType.Variable, Current.Value, Current.Line, Current.Position));
@@ -223,6 +234,16 @@ public class SyntaxParser
             Parse_U();
             Match(")");
         }
+        else if (Current.Type == "КОР" || Current.Type == "ЭКСП" || Current.Type == "ЛОГ" || 
+                 Current.Type == "СИН" || Current.Type == "КОС" || Current.Type == "ТАН")
+        {
+            var func = Current.Type;
+            Match(Current.Type);
+            Match("(");
+            Parse_U();
+            _output.Add(new Operation(OperationType.Function, func, Current.Line, Current.Position));
+            Match(")");
+        }
     }
 
     private void Parse_H()
@@ -230,11 +251,38 @@ public class SyntaxParser
         if (Current.Type == "[")
         {
             Match("[");
-            Parse_U();
-            _output.Add(new Operation(OperationType.Operator, "[]", Current.Line, Current.Position));
+            Parse_U(); // Вычисляем первый индекс
             Match("]");
+            if (Current.Type == "[")
+            {
+                Match("[");
+                Parse_U(); // Вычисляем второй индекс
+                Match("]");
+                if (Current.Type == "=")
+                {
+                    Match("=");
+                    Parse_U(); // Вычисляем значение для присваивания
+                    _output.Add(new Operation(OperationType.Array2DAssign, "", Current.Line, Current.Position));
+                }
+                else
+                {
+                    _output.Add(new Operation(OperationType.Operator, "[][]", Current.Line, Current.Position));
+                }
+            }
+            else
+            {
+                if (Current.Type == "=")
+                {
+                    Match("=");
+                    Parse_U(); // Вычисляем значение для присваивания
+                    _output.Add(new Operation(OperationType.ArrayAssign, "", Current.Line, Current.Position));
+                }
+                else
+                {
+                    _output.Add(new Operation(OperationType.Operator, "[]", Current.Line, Current.Position));
+                }
+            }
         }
-        // else: ε
     }
 
     private void Parse_J()
@@ -303,6 +351,32 @@ public class SyntaxParser
     private void Parse_Z()
     {
         // ε - пустое правило
+    }
+
+    private void Parse_Array_Decl()
+    {
+        var arrayName = Current.Value;
+        Match("id");
+        Match("[");
+        Parse_U(); // Вычисляем размер
+        _output.Add(new Operation(OperationType.ArraySize, "rows", Current.Line, Current.Position));
+        Match("]");
+        
+        if (Current.Type == "[")
+        {
+            // Двумерный массив
+            Match("[");
+            Parse_U(); // Вычисляем размер столбцов
+            _output.Add(new Operation(OperationType.ArraySize, "cols", Current.Line, Current.Position));
+            Match("]");
+            _output.Add(new Operation(OperationType.ArrayDecl, arrayName, Current.Line, Current.Position));
+        }
+        else
+        {
+            // Одномерный массив
+            _output.Add(new Operation(OperationType.Array1DDecl, arrayName, Current.Line, Current.Position));
+        }
+        Match(";");
     }
 
     public List<Operation> GetOps()
