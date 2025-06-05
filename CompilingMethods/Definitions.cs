@@ -62,6 +62,28 @@ public static class Definitions
         { 32, "Распознан &" },
         { 33, "Распознано десятичное число" }
     };
+    
+    public static readonly Dictionary<string, int> Map = new()
+    {
+        { "=", 16 },
+        { "<", 17 },
+        { ">", 18 },
+        { "#", 19 }, // ==
+        { "!=", 22 },
+        { "+", 3 },
+        { "-", 4 },
+        { "*", 5 },
+        { "/", 6 },
+        { "ВЫВОД", 26 },
+        { "ВВОД", 25 },
+        { "sqrt", 27 },
+        { "exp", 28 },
+        { "log_b", 29 },
+        { "j", 34 },
+        { "jf", 35 },
+        { "new", 31 },
+        { "ind", 36 }
+    };
 
 
     public static readonly State[,] TransitionTable = new[,]

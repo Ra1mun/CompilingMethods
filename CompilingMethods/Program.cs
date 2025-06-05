@@ -1,33 +1,21 @@
 ﻿using CompilingMethods;
 
-Console.WriteLine("Введите программу построчно. Пустая строка — завершение ввода.");
-string line;
-var fullInput = "";
-while (true)
-{
-    Console.Write("> ");
-    line = Console.ReadLine();
-    if (string.IsNullOrWhiteSpace(line)) break;
-    fullInput += line + " ";
-}
+const int MAX_FILE_SIZE = 1024 * 1024;
+var fileName = Console.ReadLine();;
 
 try
 {
-    var lexer = new LexerParser(fullInput);
-    var tokens = lexer.Tokenize();
-    Console.WriteLine("\nТокены:");
-    Console.WriteLine(string.Join(" ", tokens));
+    if (!File.Exists(fileName))
+    {
+        throw new FileNotFoundException($"Файл не найден: {fileName}");
+    }
 
-    Console.WriteLine("\nСинтаксический разбор:");
-    var parser = new SyntaxParser(tokens);
-    parser.Parse_S();
-    
-    Console.WriteLine("\nАнализ завершён успешно!");
-    var ops = parser.GetOps();
-    Console.WriteLine(string.Join(" ", ops));
+    var fullInput = File.ReadAllText(fileName);
+    Interpreter.Interpret(fullInput);
 }
 catch (Exception ex)
 {
     Console.WriteLine("\nОшибка: " + ex.Message);
+    Environment.Exit(1);
 }
 

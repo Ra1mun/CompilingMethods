@@ -7,13 +7,16 @@ public class SyntaxParser
 {
     private readonly List<Token> _tokens;
     private int _position;
+    private int _labelCounter;
+    private readonly List<Operation> _output = new();
     
     private Token Current => _tokens[_position];
-    private readonly Stack<Token> _stack = new();
 
     public SyntaxParser(List<Token> tokens)
     {
         _tokens = tokens;
+        _position = 0;
+        _labelCounter = 0;
     }
 
     public void Parse_S()
@@ -32,6 +35,7 @@ public class SyntaxParser
 
     private void Parse_I()
     {
+        var id = Current.Value;
         Match("id");
         Parse_H();
         Parse_W();
@@ -43,6 +47,7 @@ public class SyntaxParser
         if (Current.Type == ",")
         {
             Match(",");
+            var id = Current.Value;
             Match("id");
             Parse_H();
             Parse_W();
@@ -54,10 +59,12 @@ public class SyntaxParser
     {
         if (Current.Type == "id")
         {
+            var id = Current.Value;
             Match("id");
             Parse_H();
             Match("=");
             Parse_U();
+            _output.Add(new Operation(OperationType.Assign, id, Current.Line, Current.Position));
             Match(";");
             Parse_Y();
         }
@@ -73,21 +80,30 @@ public class SyntaxParser
         }
         else if (Current.Type == "ПОКА")
         {
+            var startLabel = $"m{_labelCounter++}";
+            var endLabel = $"m{_labelCounter++}";
+            
+            _output.Add(new Operation(OperationType.Label, startLabel, Current.Line, Current.Position));
             Match("ПОКА");
             Match("(");
             Parse_C();
+            _output.Add(new Operation(OperationType.JumpIfFalse, endLabel, Current.Line, Current.Position));
             Match(")");
             Match("{");
             Parse_Y();
+            _output.Add(new Operation(OperationType.Jump, startLabel, Current.Line, Current.Position));
+            _output.Add(new Operation(OperationType.Label, endLabel, Current.Line, Current.Position));
             Match("}");
         }
         else if (Current.Type == "ВВОД")
         {
             Match("ВВОД");
             Match("(");
+            var id = Current.Value;
             Match("id");
             Parse_H();
             Match(")");
+            _output.Add(new Operation(OperationType.Read, id, Current.Line, Current.Position));
             Match(";");
             Parse_Y();
         }
@@ -96,6 +112,7 @@ public class SyntaxParser
             Match("ВЫВОД");
             Match("(");
             Parse_U();
+            _output.Add(new Operation(OperationType.Print, "print", Current.Line, Current.Position));
             Match(")");
             Match(";");
             Parse_Y();
@@ -134,12 +151,14 @@ public class SyntaxParser
         {
             Match("+");
             Parse_T();
+            _output.Add(new Operation(OperationType.Operator, "+", Current.Line, Current.Position));
             Parse_U_();
         }
         else if (Current.Type == "-")
         {
             Match("-");
             Parse_T();
+            _output.Add(new Operation(OperationType.Operator, "-", Current.Line, Current.Position));
             Parse_U_();
         }
         // else: ε
@@ -157,12 +176,14 @@ public class SyntaxParser
         {
             Match("*");
             Parse_F();
+            _output.Add(new Operation(OperationType.Operator, "*", Current.Line, Current.Position));
             Parse_T_();
         }
         else if (Current.Type == "/")
         {
             Match("/");
             Parse_F();
+            _output.Add(new Operation(OperationType.Operator, "/", Current.Line, Current.Position));
             Parse_T_();
         }
         // else: ε
@@ -174,6 +195,7 @@ public class SyntaxParser
         {
             Match("~");
             Parse_R();
+            _output.Add(new Operation(OperationType.Operator, "~", Current.Line, Current.Position));
         }
         else
         {
@@ -185,11 +207,13 @@ public class SyntaxParser
     {
         if (Current.Type == "number")
         {
+            _output.Add(new Operation(OperationType.Number, Current.Value, Current.Line, Current.Position));
             Match("number");
             Parse_H();
         }
         else if (Current.Type == "id")
         {
+            _output.Add(new Operation(OperationType.Variable, Current.Value, Current.Line, Current.Position));
             Match("id");
             Parse_H();
         }
@@ -199,10 +223,6 @@ public class SyntaxParser
             Parse_U();
             Match(")");
         }
-        else
-        {
-            throw new Exception($"Ошибка в правиле R: ожидается 'number', '(', 'id' найдено '{Current.Value}' на позиции {Current.Line}, {Current.Position}");
-        }
     }
 
     private void Parse_H()
@@ -211,6 +231,7 @@ public class SyntaxParser
         {
             Match("[");
             Parse_U();
+            _output.Add(new Operation(OperationType.Operator, "[]", Current.Line, Current.Position));
             Match("]");
         }
         // else: ε
@@ -228,6 +249,7 @@ public class SyntaxParser
         {
             Match("|");
             Parse_Q();
+            _output.Add(new Operation(OperationType.Operator, "|", Current.Line, Current.Position));
             Parse_J_();
         }
         // else: ε
@@ -245,6 +267,7 @@ public class SyntaxParser
         {
             Match("&");
             Parse_K();
+            _output.Add(new Operation(OperationType.Operator, "&", Current.Line, Current.Position));
             Parse_Q_();
         }
         // else: ε
@@ -264,8 +287,10 @@ public class SyntaxParser
             if (Current.Type == ">" || Current.Type == "<" || 
                 Current.Type == "#" || Current.Type == "!")
             {
+                var op = Current.Type;
                 Match(Current.Type);
                 Parse_U();
+                _output.Add(new Operation(OperationType.Operator, op, Current.Line, Current.Position));
                 Parse_Z();
             }
             else
@@ -280,16 +305,15 @@ public class SyntaxParser
         // ε - пустое правило
     }
 
-    public Stack<Token> GetOps()
+    public List<Operation> GetOps()
     {
-        return _stack;
+        return _output;
     }
 
     private void Match(string expectedType)
     {
         if (Current.Type == expectedType)
         {
-            Console.WriteLine($"matched token: {Current.Value} ({Current.Type})");
             _position++;
         }
         else
