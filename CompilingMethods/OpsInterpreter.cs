@@ -7,6 +7,7 @@ using System.Linq;
 public class OpsInterpreter
 {
     private const double Eps = 1e-9;
+    private const int MaxArrayLength = 1000;
     private readonly Stack<double> _stack = new();
     private readonly Dictionary<string, double> _variables = new();
     private readonly Dictionary<string, int> _labels = new();
@@ -21,7 +22,6 @@ public class OpsInterpreter
     public OpsInterpreter(List<Operation> program)
     {
         _program = program;
-        _pc = 0;
         PreprocessLabels();
     }
 
@@ -63,6 +63,23 @@ public class OpsInterpreter
                 }
                 _stack.Push(value);
                 break;
+            case OperationType.ArrayVariable:
+                var arrayIndex = (int)_stack.Pop();
+                if (!_arrays.TryGetValue(op.Value, out var array))
+                {
+                    throw new Exception($"Переменная не инициализирована: {op.Value}");
+                }
+                _stack.Push(array[arrayIndex, 0]);
+                break;
+            case OperationType.Array2DVariable:
+                var indexRow = (int)_stack.Pop();
+                var indexCols = (int)_stack.Pop();
+                if (!_arrays.TryGetValue(op.Value, out array))
+                {
+                    throw new Exception($"Переменная не инициализирована: {op.Value}");
+                }
+                _stack.Push(array[indexRow, indexCols]);
+                break;
             case OperationType.Operator:
                 ExecuteOperator(op.Value);
                 break;
@@ -95,7 +112,7 @@ public class OpsInterpreter
                 }
                 break;
             case OperationType.Array1DDecl:
-                if (_currentArrayRows <= 0)
+                if (_currentArrayRows <= 0 || _currentArrayCols >= MaxArrayLength)
                 {
                     throw new Exception($"Некорректный размер одномерного массива: {_currentArrayRows}");
                 }
@@ -113,10 +130,11 @@ public class OpsInterpreter
                 Console.WriteLine($"Создан двумерный массив {array2DName} размером {_currentArrayRows}x{_currentArrayCols}"); // Отладочный вывод
                 break;
             case OperationType.ArrayAssign:
-                // Присваивание значения элементу массива
+                var index = _pc - 1;
+                var assignArrayName = _program[index].Value;
                 var assignValue = _stack.Pop();
                 var assignIndex = (int)_stack.Pop();
-                var assignArrayName = _stack.Pop().ToString();
+                
                 if (!_arrays.TryGetValue(assignArrayName, out var assignArray))
                 {
                     throw new Exception($"Массив не найден: {assignArrayName}");
@@ -132,7 +150,7 @@ public class OpsInterpreter
                 var assignValue2D = _stack.Pop();
                 var assignColIndex = (int)_stack.Pop();
                 var assignRowIndex = (int)_stack.Pop();
-                var assignArrayName2D = _stack.Pop().ToString();
+                var assignArrayName2D = _program[--_pc].Value;
                 if (!_arrays.TryGetValue(assignArrayName2D, out var assignArray2D))
                 {
                     throw new Exception($"Массив не найден: {assignArrayName2D}");
@@ -246,9 +264,9 @@ public class OpsInterpreter
                 UnaryOp(a => -a);
                 break;
             case "[]":
-                // Обработка индексации одномерного массива
                 var index = (int)_stack.Pop();
-                var arrayName = _stack.Pop().ToString();
+                var arrayIndex = _pc;
+                var arrayName = _program[arrayIndex].Value;
                 if (!_arrays.TryGetValue(arrayName, out var array))
                 {
                     throw new Exception($"Массив не найден: {arrayName}");
@@ -263,7 +281,8 @@ public class OpsInterpreter
                 // Обработка индексации двумерного массива
                 var colIndex = (int)_stack.Pop();
                 var rowIndex = (int)_stack.Pop();
-                var arrayName2D = _stack.Pop().ToString();
+                arrayIndex = _pc - 1;
+                var arrayName2D = _program[arrayIndex].Value;
                 if (!_arrays.TryGetValue(arrayName2D, out var array2D))
                 {
                     throw new Exception($"Массив не найден: {arrayName2D}");

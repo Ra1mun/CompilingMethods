@@ -17,7 +17,9 @@ public enum OperationType
     String,
     ArrayAssign,
     Array2DAssign,
-    Array1DDecl
+    Array1DDecl,
+    ArrayVariable,
+    Array2DVariable
 }
 
 public class Operation

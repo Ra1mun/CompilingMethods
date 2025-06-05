@@ -8,7 +8,7 @@ public class SyntaxParser
     private readonly List<Token> _tokens;
     private int _position;
     private int _labelCounter;
-    private readonly List<Operation> _output = new();
+    private readonly List<Operation> _output = [];
     
     private Token Current => _tokens[_position];
 
@@ -27,12 +27,6 @@ public class SyntaxParser
             Parse_I();
             Parse_S();
         }
-        else if (Current.Type == "МАСС")
-        {
-            Match("МАСС");
-            Parse_Array_Decl();
-            Parse_S();
-        }
         else
         {
             Parse_Y();
@@ -41,7 +35,6 @@ public class SyntaxParser
 
     private void Parse_I()
     {
-        var id = Current.Value;
         Match("id");
         Parse_H();
         Parse_W();
@@ -53,7 +46,6 @@ public class SyntaxParser
         if (Current.Type == ",")
         {
             Match(",");
-            var id = Current.Value;
             Match("id");
             Parse_H();
             Parse_W();
@@ -67,22 +59,50 @@ public class SyntaxParser
         {
             var id = Current.Value;
             Match("id");
-            Parse_H();
-            Match("=");
-            Parse_U();
-            _output.Add(new Operation(OperationType.Assign, id, Current.Line, Current.Position));
+            if (Current.Type == "[")
+            {
+                // Это операция с массивом
+                Match("[");
+                Parse_U(); // Вычисляем индекс
+                Match("]");
+                if (Current.Type == "=")
+                {
+                    Match("=");
+                    Parse_U(); // Вычисляем значение для присваивания
+                    _output.Add(new Operation(OperationType.ArrayAssign, id, Current.Line, Current.Position));
+                }
+                else
+                {
+                    _output.Add(new Operation(OperationType.Operator, "[]", Current.Line, Current.Position));
+                }
+            }
+            else
+            {
+                // Это обычное присваивание
+                Match("=");
+                Parse_U();
+                _output.Add(new Operation(OperationType.Assign, id, Current.Line, Current.Position));
+            }
             Match(";");
             Parse_Y();
         }
         else if (Current.Type == "ЕСЛИ")
         {
+            var startLabel = $"m{_labelCounter++}";
+            var endLabel = $"m{_labelCounter++}";
+            
+            _output.Add(new Operation(OperationType.Label, startLabel, Current.Line, Current.Position));
             Match("ЕСЛИ");
             Match("(");
             Parse_C();
+            _output.Add(new Operation(OperationType.JumpIfFalse, endLabel, Current.Line, Current.Position));
             Match(")");
-            Match(";");
+            Match("{");
             Parse_Y();
             Parse_EY();
+            _output.Add(new Operation(OperationType.Label, endLabel, Current.Line, Current.Position));
+            Match("}");
+            Parse_Y();
         }
         else if (Current.Type == "ПОКА")
         {
@@ -100,6 +120,7 @@ public class SyntaxParser
             _output.Add(new Operation(OperationType.Jump, startLabel, Current.Line, Current.Position));
             _output.Add(new Operation(OperationType.Label, endLabel, Current.Line, Current.Position));
             Match("}");
+            Parse_Y();
         }
         else if (Current.Type == "ВВОД")
         {
@@ -121,6 +142,12 @@ public class SyntaxParser
             _output.Add(new Operation(OperationType.Print, "print", Current.Line, Current.Position));
             Match(")");
             Match(";");
+            Parse_Y();
+        }
+        else if (Current.Type == "МАСС")
+        {
+            Match("МАСС");
+            Parse_Array_Decl();
             Parse_Y();
         }
         // else: ε
@@ -215,7 +242,6 @@ public class SyntaxParser
         {
             _output.Add(new Operation(OperationType.Number, Current.Value, Current.Line, Current.Position));
             Match("number");
-            Parse_H();
         }
         else if (Current.Type == "string")
         {
@@ -224,8 +250,17 @@ public class SyntaxParser
         }
         else if (Current.Type == "id")
         {
-            _output.Add(new Operation(OperationType.Variable, Current.Value, Current.Line, Current.Position));
+            var id = Current.Value;
             Match("id");
+            if (Current.Type == "[")
+            {
+                Match("[");
+                Parse_U(); 
+                Match("]");
+                _output.Add(new Operation(OperationType.ArrayVariable, id, Current.Line, Current.Position));
+            }
+            else
+                _output.Add(new Operation(OperationType.Variable, id, Current.Line, Current.Position));
             Parse_H();
         }
         else if (Current.Type == "(")
@@ -271,16 +306,7 @@ public class SyntaxParser
             }
             else
             {
-                if (Current.Type == "=")
-                {
-                    Match("=");
-                    Parse_U(); // Вычисляем значение для присваивания
-                    _output.Add(new Operation(OperationType.ArrayAssign, "", Current.Line, Current.Position));
-                }
-                else
-                {
-                    _output.Add(new Operation(OperationType.Operator, "[]", Current.Line, Current.Position));
-                }
+                _output.Add(new Operation(OperationType.Operator, "[]", Current.Line, Current.Position));
             }
         }
     }
@@ -392,7 +418,7 @@ public class SyntaxParser
         }
         else
         {
-            throw new Exception($"Ожидалось '{expectedType}', найдено '{Current.Type}'");
+            throw new Exception($"Ожидалось '{expectedType}', найдено '{Current.Type}' на позиции {Current.Line}, {Current.Position}");
         }
     }
 }
