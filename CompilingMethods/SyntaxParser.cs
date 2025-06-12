@@ -81,7 +81,8 @@ public class SyntaxParser
                 // Это обычное присваивание
                 Match("=");
                 Parse_U();
-                _output.Add(new Operation(OperationType.Assign, id, Current.Line, Current.Position));
+                _output.Add(new Operation(OperationType.Operator, ":=", Current.Line, Current.Position));
+                _output.Add(new Operation(OperationType.Variable, id, Current.Line, Current.Position));
             }
             Match(";");
             Parse_Y();
@@ -95,7 +96,7 @@ public class SyntaxParser
             Match("ЕСЛИ");
             Match("(");
             Parse_C();
-            _output.Add(new Operation(OperationType.JumpIfFalse, endLabel, Current.Line, Current.Position));
+            _output.Add(new Operation(OperationType.JumpIfFalse, endLabel +": jf", Current.Line, Current.Position));
             Match(")");
             Match("{");
             Parse_Y();
@@ -113,11 +114,11 @@ public class SyntaxParser
             Match("ПОКА");
             Match("(");
             Parse_C();
-            _output.Add(new Operation(OperationType.JumpIfFalse, endLabel, Current.Line, Current.Position));
+            _output.Add(new Operation(OperationType.JumpIfFalse, endLabel +": jf", Current.Line, Current.Position));
             Match(")");
             Match("{");
             Parse_Y();
-            _output.Add(new Operation(OperationType.Jump, startLabel, Current.Line, Current.Position));
+            _output.Add(new Operation(OperationType.Jump, startLabel +": j", Current.Line, Current.Position));
             _output.Add(new Operation(OperationType.Label, endLabel, Current.Line, Current.Position));
             Match("}");
             Parse_Y();

@@ -1,7 +1,7 @@
-﻿using CompilingMethods;
+﻿    using CompilingMethods;
 
 const int MAX_FILE_SIZE = 1024 * 1024; // 1 MB
-const string WORK_DIR = @"D:\Repos\CompilingMethods\CompilingMethods";
+const string WORK_DIR = @"C:\Users\sobol\Documents\CompilingMethods\CompilingMethods";
 
 Console.WriteLine("Введите имя файла:");
 var fileName = Console.ReadLine();

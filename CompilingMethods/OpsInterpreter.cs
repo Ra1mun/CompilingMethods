@@ -14,7 +14,6 @@ public class OpsInterpreter
     private readonly List<Operation> _program;
     private int _pc;
 
-    // Память для массивов
     private readonly Dictionary<string, double[,]> _arrays = new();
     private int _currentArrayRows;
     private int _currentArrayCols;
@@ -48,6 +47,9 @@ public class OpsInterpreter
 
     private void ExecuteOperation(Operation op)
     {
+        int index;
+        double assignValue;
+        int arrayIndex; 
         switch (op.Type)
         {
             case OperationType.Number:
@@ -64,17 +66,17 @@ public class OpsInterpreter
                 _stack.Push(value);
                 break;
             case OperationType.ArrayVariable:
-                var arrayIndex = (int)_stack.Pop();
-                if (!_arrays.TryGetValue(op.Value, out var array))
+                arrayIndex = (int)_stack.Pop();
+                if (!_arrays.TryGetValue(op.Value, out var arr))
                 {
                     throw new Exception($"Переменная не инициализирована: {op.Value}");
                 }
-                _stack.Push(array[arrayIndex, 0]);
+                _stack.Push(arr[arrayIndex, 0]);
                 break;
             case OperationType.Array2DVariable:
                 var indexRow = (int)_stack.Pop();
                 var indexCols = (int)_stack.Pop();
-                if (!_arrays.TryGetValue(op.Value, out array))
+                if (!_arrays.TryGetValue(op.Value, out var array))
                 {
                     throw new Exception($"Переменная не инициализирована: {op.Value}");
                 }
@@ -130,9 +132,9 @@ public class OpsInterpreter
                 Console.WriteLine($"Создан двумерный массив {array2DName} размером {_currentArrayRows}x{_currentArrayCols}"); // Отладочный вывод
                 break;
             case OperationType.ArrayAssign:
-                var index = _pc - 1;
+                index = _pc - 1;
                 var assignArrayName = _program[index].Value;
-                var assignValue = _stack.Pop();
+                assignValue = _stack.Pop();
                 var assignIndex = (int)_stack.Pop();
                 
                 if (!_arrays.TryGetValue(assignArrayName, out var assignArray))
@@ -186,10 +188,6 @@ public class OpsInterpreter
                 }
                 _variables[op.Value] = inputValue;
                 Console.WriteLine($"Установлено значение {op.Value} = {inputValue}"); // Отладочный вывод
-                break;
-            case OperationType.Assign:
-                var val = _stack.Pop();
-                _variables[op.Value] = val;
                 break;
             default:
                 throw new Exception($"Неизвестная операция: {op.Type}");
@@ -263,6 +261,23 @@ public class OpsInterpreter
             case "~":
                 UnaryOp(a => -a);
                 break;
+            case ":=":
+                var assignValue = _stack.Pop();
+                var assignVar = _program[_pc++].Value;
+                _variables[assignVar] = assignValue;
+                break;
+            case "j":
+                var jumpLabel = _program[_pc++].Value;
+                Jump(jumpLabel);
+                break;
+            case "jf":
+                var condition = _stack.Pop();
+                var jumpIfFalseLabel = _program[_pc++].Value;
+                if (condition == 0)
+                {
+                    Jump(jumpIfFalseLabel);
+                }
+                break;
             case "[]":
                 var index = (int)_stack.Pop();
                 var arrayIndex = _pc;
@@ -321,21 +336,23 @@ public class OpsInterpreter
 
     private void Jump(string label)
     {
-        if (!_labels.TryGetValue(label, out int target))
+        var l = label[..2];
+        if (!_labels.TryGetValue(l, out int target))
         {
-            throw new Exception($"Метка не найдена: {label}");
+            throw new Exception($"Метка не найдена: {l}");
         }
         _pc = target;
     }
 
     private void JumpIfFalse(string label)
     {
+        var l = label[..2];
         var condition = _stack.Pop();
         if (condition == 0)
         {
-            if (!_labels.TryGetValue(label, out int target))
+            if (!_labels.TryGetValue(l, out int target))
             {
-                throw new Exception($"Метка не найдена: {label}");
+                throw new Exception($"Метка не найдена: {l}");
             }
             _pc = target;
         }

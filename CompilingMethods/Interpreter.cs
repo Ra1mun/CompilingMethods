@@ -11,6 +11,7 @@ public class Interpreter
         parser.Parse_S();
         
         var ops = parser.GetOps();
+        Console.WriteLine(string.Join(" ", ops));
         
         var interpreter = new OpsInterpreter(ops);
         interpreter.Execute();
